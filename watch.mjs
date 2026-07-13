@@ -66,16 +66,20 @@ async function searchFlights(context, w) {
 
     await page.evaluate(() => doSearchSubmit('/reservation', 'ja', true));
 
-    // 結果（便一覧 or 「該当便なし」メッセージ）が出るまで待つ
+    // 結果（便一覧 or 「該当便なし」メッセージ）が出るまで待つ。
+    // フォーム送信後のナビゲーション中は document.body が一瞬nullになるため、
+    // 述語内で例外を投げずfalseを返してポーリングを継続させる（CIでのタイミング差対策）。
     await page.waitForFunction(() => {
-      const t = document.body.innerText || '';
-      return document.querySelector('.flight') ||
+      const b = document.body;
+      if (!b) return false;
+      const t = b.innerText || '';
+      return !!document.querySelector('.flight') ||
         t.includes('指定された検索条件に合うフライトはありません') ||
         t.includes('過去の日付で空席照会をすることはできません');
     }, { timeout: 45000 });
 
     const result = await page.evaluate(() => {
-      const bodyText = document.body.innerText || '';
+      const bodyText = (document.body && document.body.innerText) || '';
       if (bodyText.includes('過去の日付で空席照会をすることはできません')) {
         return { error: '過去の日付です', flights: [] };
       }
@@ -136,13 +140,20 @@ async function main() {
 
   for (const w of watches) {
     const route = `${AIRPORTS[w.origin] || w.origin} (${w.origin}) → ${AIRPORTS[w.destination] || w.destination} (${w.destination})`;
+    // CIでは一時的なナビゲーション失敗があり得るため、最大2回リトライ
     let result;
-    try {
-      result = await searchFlights(context, w);
-    } catch (e) {
-      console.error(`[${w.id}] 検索失敗:`, e.message);
-      continue;
+    let lastErr;
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      try {
+        result = await searchFlights(context, w);
+        lastErr = null;
+        break;
+      } catch (e) {
+        lastErr = e;
+        console.error(`[${w.id}] 検索失敗 (試行${attempt}/2):`, e.message);
+      }
     }
+    if (lastErr || !result) continue;
     if (result.error) {
       console.error(`[${w.id}] ${result.error}`);
       continue;
