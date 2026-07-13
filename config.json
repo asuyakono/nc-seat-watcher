@@ -1,0 +1,16 @@
+{
+  "watches": [
+    {
+      "id": "niijima-chofu-0802",
+      "tripType": "OW",
+      "origin": "NJM",
+      "destination": "CHU",
+      "date": "2026/08/02",
+      "adults": 1,
+      "children": 0,
+      "infants": 0,
+      "flights": [],
+      "notifyOnClose": true
+    }
+  ]
+}

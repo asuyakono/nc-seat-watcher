@@ -1,0 +1,13 @@
+{
+  "name": "nc-seat-watcher",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "新中央航空(NC)の空席をウォッチし、空席が出たらSlackへ通知する",
+  "scripts": {
+    "watch": "node watch.mjs"
+  },
+  "dependencies": {
+    "playwright": "^1.48.0"
+  }
+}
